@@ -67,9 +67,9 @@ void drawNewCards() {
 int main(int argc, char* argv[]) {
     gfxInitDefault();
     consoleInit(GFX_TOP, NULL);
-	srand(time(NULL));
-	
-	printf("Welcome to 3DS Video Poker, by mpgiii.\n");
+    srand(time(NULL));
+    
+    printf("Welcome to 3DS Video Poker, by mpgiii.\n");
 
     while (aptMainLoop()) {
         gspWaitForVBlank();
@@ -81,14 +81,14 @@ int main(int argc, char* argv[]) {
         
         switch (gameState) {
             case NEW_HAND:
-				consoleClear();
-				printf("Generating hand...\n");
-				initializeRemainingDeck();
-				drawNewCards();
-				resetHolds();
-				selectedCardIndex = 0;
-				gameState = REDRAW;
-				printHand(hand, selectedCardIndex, held, true);
+                consoleClear();
+                printf("Generating hand...\n");
+                initializeRemainingDeck();
+                drawNewCards();
+                resetHolds();
+                selectedCardIndex = 0;
+                gameState = REDRAW;
+                printHand(hand, selectedCardIndex, held, true);
                 break;
             case REDRAW:
                 if (kDown & KEY_A) {
@@ -96,8 +96,8 @@ int main(int argc, char* argv[]) {
                     printf("Redrawing cards...\n");
                     drawNewCards();
                     gameState = GAME_OVER;
-					printf("\x1b[1;1HGAME OVER\n");
-					printf("Press A to reset.");
+                    printf("\x1b[1;1HGAME OVER\n");
+                    printf("Press A to reset.");
                     printHand(hand, selectedCardIndex, held, false);
                 }
                 if (kDown & KEY_DUP) {
