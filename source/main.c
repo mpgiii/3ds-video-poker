@@ -5,6 +5,7 @@
 #include <3ds.h>
 
 #define DECK_SIZE 52
+#define HAND_SIZE 5
 
 enum Suit {
 	HEARTS,
@@ -24,6 +25,8 @@ struct Card {
 	enum Rank rank;
 	enum Suit suit;
 };
+
+struct Card hand[HAND_SIZE];  // global variable for state management
 
 const char* suit_names[] = {"Hearts", "Diamonds", "Clubs", "Spades"};
 const char* rank_names[] = {
@@ -58,6 +61,14 @@ void printCard(struct Card c) {
 	printf("%s of %s", rank_names[c.rank], suit_names[c.suit]);
 }
 
+void printHand() {
+	int i;
+	for (i = 0; i < HAND_SIZE; i++) {
+		printCard(hand[i]);
+		printf("\n");
+	}
+}
+
 
 void generatePokerHand()
 {
@@ -69,10 +80,9 @@ void generatePokerHand()
 	initializeDeck(deck);
 	shuffleDeck(deck);
 
-	// Draw the top 5 cards
-	for (i = 0; i < 5; i++) {
-		printCard(deck[i]);
-		printf("\n");
+	// Draw a hand of cards and copy into the global hand array
+	for (i = 0; i < HAND_SIZE; i++) {
+		hand[i] = deck[i];
 	}
 }
 
@@ -101,6 +111,7 @@ int main(int argc, char* argv[])
 			consoleClear();
 			printf("Generating hand...\n");
 			generatePokerHand();
+			printHand();
 			printf("\n\n");
 			printf("Press 'A' to generate a new hand.\n");
 			printf("Press 'START' to exit.");
