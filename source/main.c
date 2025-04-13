@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,7 +27,14 @@ struct Card {
 	enum Suit suit;
 };
 
-struct Card hand[HAND_SIZE];  // global variable for state management
+// global variables for state management
+struct Card deck[DECK_SIZE];
+int remainingCardsCount = DECK_SIZE;
+struct Card hand[HAND_SIZE];
+int selectedCardIndex = 0;
+bool held[HAND_SIZE] = {false, false, false, false, false};
+enum GameState { NEW_HAND, REDRAW, GAME_OVER } gameState = NEW_HAND;
+// end state management variables
 
 const char* suit_names[] = {"Hearts", "Diamonds", "Clubs", "Spades"};
 const char* rank_names[] = {
@@ -34,19 +42,7 @@ const char* rank_names[] = {
 	"Jack", "Queen", "King", "Ace"
 };
 
-void initializeDeck(struct Card deck[]) {
-	int i = 0;
-	int s, r;
-	for (s = 0; s < NUM_SUITS; s++) {
-		for (r = 0; r < NUM_RANKS; r++) {
-			deck[i].rank = (enum Rank) r;
-			deck[i].suit = (enum Suit) s;
-			i++;
-		}
-	}
-}
-
-void shuffleDeck(struct Card deck[]) {
+void shuffleDeck() {
 	int i, j;
 	struct Card temp;
 	for (i = DECK_SIZE - 1; i > 0; i--) {
@@ -57,66 +53,150 @@ void shuffleDeck(struct Card deck[]) {
 	}
 }
 
+void initializeRemainingDeck() {
+	int i = 0;
+	int s, r;
+    for (s = 0; s < NUM_SUITS; s++) {
+        for (r = 0; r < NUM_RANKS; r++) {
+            deck[i].rank = (enum Rank) r;
+            deck[i].suit = (enum Suit) s;
+            i++;
+        }
+    }
+    shuffleDeck(deck); // Shuffle deck to start fresh
+    remainingCardsCount = DECK_SIZE; // Reset remaining card count
+}
+
 void printCard(struct Card c) {
 	printf("%s of %s", rank_names[c.rank], suit_names[c.suit]);
 }
 
 void printHand() {
 	int i;
+	int r, c;
 	for (i = 0; i < HAND_SIZE; i++) {
+		r = 5 + i;
+		c = 10;
+		
+		// move cursor
+		printf("\x1b[%d;%dH", r, c);
+		
+		if (i == selectedCardIndex) {
+			printf("-> ");  // highlight current selection
+		} else {
+			printf("   ");  // spacing to line up arrows
+		}
+		
 		printCard(hand[i]);
-		printf("\n");
+		
+		if (held[i]) {
+			printf(" \x1b[31m[HELD]\x1b[0m");
+		}
 	}
 }
 
-
-void generatePokerHand()
-{
-	int i;
-
-	struct Card deck[DECK_SIZE];
-	srand(time(NULL));
-
-	initializeDeck(deck);
-	shuffleDeck(deck);
-
-	// Draw a hand of cards and copy into the global hand array
+void drawNewCards() {
+	int i, cardIndex;
 	for (i = 0; i < HAND_SIZE; i++) {
-		hand[i] = deck[i];
+        if (!held[i]) {
+            if (remainingCardsCount > 0) {
+                // Draw a card from the remaining deck
+                cardIndex = rand() % remainingCardsCount;
+                hand[i] = deck[cardIndex];
+                // Move the last card to the drawn spot to avoid empty spots
+                deck[cardIndex] = deck[remainingCardsCount - 1];
+                remainingCardsCount--;
+            }
+        }
+    }
+}
+
+void resetHolds() {
+	int i;
+	for (i = 0; i < HAND_SIZE; i++) {
+		held[i] = false;
 	}
 }
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]) {
 	gfxInitDefault();
 	consoleInit(GFX_TOP, NULL);
 
 	printf("Welcome to video poker, by mpgiii.\n\n");
-	printf("Press 'A' to generate a new hand.\n");
-	printf("Press 'START' to exit.");
 
 	// Main loop
-	while (aptMainLoop())
-	{
+	while (aptMainLoop()) {
 		gspWaitForVBlank();
 		gfxSwapBuffers();
 		hidScanInput();
 
-		// Your code goes here
+		// retrieve user input
 		u32 kDown = hidKeysDown();
-		if (kDown & KEY_START)
-			break; // break in order to return to hbmenu
-		else if (kDown & KEY_A)
-		{
-			consoleClear();
-			printf("Generating hand...\n");
-			generatePokerHand();
-			printHand();
-			printf("\n\n");
-			printf("Press 'A' to generate a new hand.\n");
-			printf("Press 'START' to exit.");
-
+		
+	
+		// handle user input
+		if (kDown & KEY_START) {
+			// exit the app
+			break;
 		}
+		if (kDown & KEY_A) {
+			consoleClear();
+			
+			if (gameState == NEW_HAND) {
+				// generate a new hand
+				printf("Generating hand...\n");
+                initializeRemainingDeck(deck);
+                drawNewCards(deck);
+                resetHolds();
+                selectedCardIndex = 0;
+                gameState = REDRAW;
+			} else if (gameState == REDRAW) {
+				// redraw cards that were not held in round one
+				printf("Redrawing cards...\n");
+				drawNewCards(deck);
+				gameState = GAME_OVER;
+			} else if (gameState == GAME_OVER) {
+				// reset for a new game
+				printf("GAME OVER\n");
+				printf("Press A to start a new game.");
+				gameState = NEW_HAND;
+			}
+
+			printHand();
+		}
+		if (kDown & KEY_DUP) {
+			if (selectedCardIndex > 0) selectedCardIndex--;
+			consoleClear();
+			printHand();
+		}
+
+		if (kDown & KEY_DDOWN) {
+			if (selectedCardIndex < HAND_SIZE - 1) selectedCardIndex++;
+			consoleClear();
+			printHand();
+		}
+
+		if (kDown & KEY_X) {
+			held[selectedCardIndex] = !held[selectedCardIndex];
+			consoleClear();
+			printHand();
+		}
+		
+		if (kDown & KEY_B) {
+			drawNewCards();
+			consoleClear();
+			printHand();
+		}
+
+		// print static instructions at the bottom of the screen
+		printf("\x1b[27;1H");
+		printf("Press A to deal a new hand");
+		printf("\x1b[28;1H");
+		printf("Press X to toggle hold");
+		printf("\x1b[29;1H");
+		printf("Use UP/DOWN to select card");
+		printf("\x1b[30;1H");
+		printf("Press START to exit");
 	}
 
 	gfxExit();
