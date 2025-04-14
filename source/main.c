@@ -83,9 +83,9 @@ int main(int argc, char* argv[]) {
             case NEW_HAND:
                 consoleClear();
                 printf("Generating hand...\n");
+                resetHolds();
                 initializeRemainingDeck();
                 drawNewCards();
-                resetHolds();
                 selectedCardIndex = 0;
                 gameState = REDRAW;
                 printHand(hand, selectedCardIndex, held, true);
